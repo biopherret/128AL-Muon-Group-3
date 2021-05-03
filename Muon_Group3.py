@@ -11,36 +11,35 @@ g= 9.807 #m/s^2
 L= .0065 #temperature lapse rate, K/m
 R= 8.31446 #ideal gas constant, J/(mol K)
 M= 0.0289652 #molar mass of dry air, kg/mol
-e = -1.602e-19 #electron charge, e
+e = 1 #electron charge, e
+
+#changes to the constants, I'm overwriting down here in case we want to go bak to the definitions above
+m = 105.658 #MeV/c^2
 
 #Constants: Subject to change based on info we get from previous groups
 A=13 #atomic weight of the stopping medium
-Z=7 #atomic number of N
+Z=7.32 #atomic number of N
 I=A*Z #approximation of mean excitation energy of the stopping medium of atoms
 z=1*e #charge of muon relative to electron charge
 
-def get_C0(x,gamma,Beta):
-    """Given the current height from the ground, gamma, and beta, returns the updated C0 value
+def get_C0(gamma,Beta):
+    """Given the current gamma and beta, returns the updated C0 value
     C0 is defined as the right side of the Bethe formula divided by rho"""
-    C0=0.3071*Z*z*z/(A*Beta*Beta)*(np.log(2*m*c*c*Beta*Beta*gamma*gamma/I)-Beta*Beta)
+    C0=0.00003071*Z*z*z/(A*Beta*Beta)*(np.log(2*m*c**2*10**6*Beta*Beta*gamma*gamma/I)-Beta*Beta)
     return C0
 
 def get_rho(x):
-    """Given the height from the ground, returns the mass dencity, rho of the air at that height."""
-    rho=p0*M/(R*T0)*(1-L*x/T0)**(g*M/(R*L)-1)
+    """Given the height from the ground, returns the mass density, rho of the air at that height."""
+    rho=1000*p0*M/(R*T0)*(1-L*x/T0)**(g*M/(R*L)-1)
     return rho
-
 #Hey group members can yall check which of these get_t_prime functions is right????? - thx
 
-def alternate_get_t_prime(C0, rho, gamma1, gamma2):
-    """Given the updated C0 and rho, the previous gamma, and the updated gamma, returns the updated t_prime
-    t_prime is the time elapsed in the muon's reference frame"""
-    t_prime = m*c/(rho*C0)*(gamma1 * (gamma1**2 - 1)**(-3/2) - gamma2 * (gamma2**2 - 1)**(-3/2))
-    return t_prime
+# we're just doing riemann sum here, I think. So it should be the value of the integrand, times dgamma
+def get_dt_prime(C0,rho,gamma1,gamma2):
+	dg = gamma1-gamma2
+	dt_prime = (m/(c*rho*C0)) * dg * 1./(np.sqrt(gamma1**2-1))
+	return dt_prime
 
-def get_t_prime(C0,rho,gamma1,gamma2):
-    t_prime=m*c/(rho*C0)*(1/np.sqrt(gamma2**2-1)-1/np.sqrt(gamma1**2-1))*(gamma2-gamma1)
-    return t_prime
 
 def findDecayProbability(t_prime):
     """Given the the time it takes for the muon to reach the detector in its own reference frame, returns the probability that it decays. """
@@ -49,73 +48,84 @@ def findDecayProbability(t_prime):
     
 
 #Initial Conditions, will be provided from the previous groups as a list for each condition of all the muons
-E_initial = [1e18,1e20]
-x0_flat_initial=[12000,10000] #height of troposphere
-x0_round_initial = [15000,13000]
-gamma_initial = [] #Lorenz Factor
-for E_value in E_initial:
-    gamma_initial.append(E_value/(m*c**2)) 
-Beta_initial=[] #beta = v/c
-for gamma_value in gamma_initial:
-    Beta_initial.append(np.sqrt(1 - 1/(gamma_value**2)))
+
+E_initial = np.array([6000,7000], dtype = 'f') #units of MeV 
+x0_flat_initial = np.array([12000,10000], dtype = 'f') #height of troposphere
+x0_round_initial = np.array([15000,13000], dtype = 'f')
+
+gamma_initial = E_initial/(m)
+Beta_initial = np.sqrt(1-1/(gamma_initial**2))
+
 t_prime_flat = 0
 t_prime_round = 0
 
-deltax=1 #dummy amount, will change
 
-E_flat_final = []
-E_round_final = []
-t_prime_flat_final = []
-t_prime_round_final = []
+E_flat_final = np.zeros(len(x0_flat_initial))
+E_round_final = np.zeros(len(x0_flat_initial))
+t_prime_flat_final = np.zeros(len(x0_round_initial))
+t_prime_round_final = np.zeros(len(x0_round_initial))
+
+number_of_steps = 5000. #dummy amount, will change
+dx_flat = x0_flat_initial/number_of_steps
+dx_round = x0_round_initial/number_of_steps
 
 #Find final energies and t_prime for flat earth
-for muon in range(len(x0_flat_initial)):
-    Beta = Beta_initial[muon]
-    x0_flat = x0_flat_initial[muon]
-    gamma = gamma_initial[muon]
-    E = E_initial[muon]
-    for i,x in enumerate(range(x0_flat,0,-deltax)):
-        C0=get_C0(x,gamma,Beta)
-        rho=get_rho(x)
-        dE=C0*rho*deltax
-        E1 = E
-        E2 = E1 - dE #feel like this should be adding dE but that results in increasing energy
-        gamma1 = gamma
-        gamma2 = E2/(m*c**2)
-        Beta1=Beta
-        Beta2=np.sqrt(1-1/(gamma2*gamma2))
-        t_prime_flat =+ alternate_get_t_prime(C0,rho,gamma1,gamma2)
+Beta = Beta_initial
+x = x0_flat_initial
+gamma = gamma_initial
+E = E_initial
 
-        gamma = gamma2
-        Beta = Beta2
-        E = E2
-    E_flat_final.append(E)
-    t_prime_flat_final.append(t_prime_flat)
+for i in range(int(number_of_steps)):
+    C0=get_C0(gamma,Beta)
+    rho=get_rho(x)
+    dE=C0*rho*dx_flat
+    E1 = E
+    E2 = E1 - dE #feel like this should be adding dE but that results in increasing energy
+    gamma1 = gamma
+    gamma2 = E2/m
+    Beta1=Beta
+    Beta2=np.sqrt(1-1/(gamma2*gamma2))
+    t_prime_flat += get_dt_prime(C0,rho,gamma1,gamma2)
 
-#Find the final energies and t_prime for found earth
-for muon in range(len(x0_round_initial)):
-    Beta = Beta_initial[muon]
-    x0_round = x0_round_initial[muon]
-    gamma = gamma_initial[muon]
-    E = E_initial[muon]
-    for i,x in enumerate(range(x0_flat,0,-deltax)):
-        C0=get_C0(x,gamma,Beta)
-        rho=get_rho(x)
-        dE=C0*rho*deltax
-        E1 = E
-        E2 = E1 - dE #feel like this should be adding dE but that results in increasing energy
-        gamma1 = gamma
-        gamma2 = E/(m*c**2)
-        Beta1=Beta
-        Beta2=np.sqrt(1-1/(gamma2*gamma2))
-        t_prime_round =+ get_t_prime(C0,rho,gamma1,gamma2)
+    gamma = gamma2
+    Beta = Beta2
+    E = E2
+    x -= dx_flat
+    print(E)
+E_flat_final = E
+t_prime_flat_final = t_prime_flat
 
-        gamma = gamma2
-        Beta = Beta2
-        E = E2
-    E_round_final.append(E)
-    t_prime_round_final.append(t_prime_round)  
+
+#Find the final energies and t_prime for round earth
+Beta = Beta_initial
+x = x0_round_initial
+gamma = gamma_initial
+E = E_initial
+
+for i in range(int(number_of_steps)):
+    C0=get_C0(gamma,Beta)
+    rho=get_rho(x)
+    dE=C0*rho*dx_round
+    E1 = E
+    E2 = E1 - dE #feel like this should be adding dE but that results in increasing energy
+    gamma1 = gamma
+    gamma2 = E2/m
+    Beta1=Beta
+    Beta2=np.sqrt(1-1/(gamma2*gamma2))
+    t_prime_round += get_dt_prime(C0,rho,gamma1,gamma2)
+
+    gamma = gamma2
+    Beta = Beta2
+    E = E2
+    x -= dx_round
+
+E_round_final = E
+t_prime_round_final = t_prime_round
  
+
+print(t_prime_round)
+print(t_prime_flat)
+
 
 #Simulating how many muons hit the detector:
     #Checks for muons in the proper energy range
@@ -123,7 +133,9 @@ for muon in range(len(x0_round_initial)):
     #If muon has the proper energy and is found not to decay, add to histogram
         
 energyDetected = 160 #Mev
-energyAllowance = 2 #Mev
+
+energyAllowance = 20 #Mev
+
  
 anglesOfDetectedMuons_flatEarth = []
 anglesOfDetectedMuons_roundEarth = []
