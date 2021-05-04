@@ -13,7 +13,7 @@ R= 8.31446 #ideal gas constant, J/(mol K)
 M= 0.0289652 #molar mass of dry air, kg/mol
 e = 1 #electron charge, e
 
-#changes to the constants, I'm overwriting down here in case we want to go bak to the definitions above
+#changes to the constants, I'm overwriting down here in case we want to go back to the definitions above
 m = 105.658 #MeV/c^2
 
 #Constants: Subject to change based on info we get from previous groups
@@ -32,9 +32,7 @@ def get_rho(x):
     """Given the height from the ground, returns the mass density, rho of the air at that height."""
     rho=1000*p0*M/(R*T0)*(1-L*x/T0)**(g*M/(R*L)-1)
     return rho
-#Hey group members can yall check which of these get_t_prime functions is right????? - thx
 
-# we're just doing riemann sum here, I think. So it should be the value of the integrand, times dgamma
 def get_dt_prime(C0,rho,gamma1,gamma2):
 	dg = gamma1-gamma2
 	dt_prime = (m/(c*rho*C0)) * dg * 1./(np.sqrt(gamma1**2-1))
@@ -91,7 +89,6 @@ for i in range(int(number_of_steps)):
     Beta = Beta2
     E = E2
     x -= dx_flat
-    print(E)
 E_flat_final = E
 t_prime_flat_final = t_prime_flat
 
@@ -122,11 +119,6 @@ for i in range(int(number_of_steps)):
 E_round_final = E
 t_prime_round_final = t_prime_round
  
-
-print(t_prime_round)
-print(t_prime_flat)
-
-
 #Simulating how many muons hit the detector:
     #Checks for muons in the proper energy range
     #Makes a probablistic decision whether a paticular muon has decayed
