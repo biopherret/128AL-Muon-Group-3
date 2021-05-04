@@ -2,7 +2,6 @@
 The muons have an origin energy, the pathlength they must travel to the detector, and an an
 azimuthal angle relative to the detector."""
 
-import math
 import numpy as np  
 import matplotlib.pyplot as plt
 
@@ -20,7 +19,7 @@ def gen_heights(n_muons, mean = 15, stdev = 2):
    
 #Path length for flat Earth. From https://arxiv.org/pdf/1606.06907v3.pdf (5)
 def gen_pathLengthFlat(theta,d):
-    return d/math.cos(theta)
+    return d/np.cos(theta)
 
 #Path length for curved Earth. From https://arxiv.org/pdf/1606.06907v3.pdf (7)
 def gen_pathLength(theta, d, R):
@@ -86,7 +85,7 @@ def gen_muons(n_muons: int):
     Parameters
     ----------
     n_muons: int
-        Number of muons to generate. 1000 is a max reasonable sample size with the current sampling method.
+        Number of muons to generate. 1E5 is a max reasonable sample size with the current sampling method.
     flat: bool
         Whether or not to use a flat earth model for pathlength. Set true if you're in flat gang.
 
@@ -94,8 +93,8 @@ def gen_muons(n_muons: int):
     ----------
     muons: np.array(n_muons, 4)
         Array of muons in the form
-            [[muon_1_pathlength_flat (KM), muon_1_pathlength_round (KM), muon_1_energy (GeV/c), muon_1_angle (rad)],
-             [muon_2_pathlength_flat (KM), muon_2_pathlength_round (KM), muon_2_energy (GeV/c), muon_2_angle (rad)] 
+            [[muon_1_pathlength_flat (M), muon_1_pathlength_round (M), muon_1_energy (MeV/c), muon_1_angle (rad)],
+             [muon_2_pathlength_flat (M), muon_2_pathlength_round (M), muon_2_energy (MeV/c), muon_2_angle (rad)] 
              ...]
     """
     thetas = np.random.uniform(-90,90, size=n_muons)
@@ -107,7 +106,7 @@ def gen_muons(n_muons: int):
     energies = gen_energies(n_muons).reshape(n_muons,1)
     thetas = thetas.reshape(n_muons,1)
 
-    muons = np.concatenate((pathlengths_flat, pathlengths_round, energies, thetas), axis=1)
+    muons = np.concatenate((np.abs(pathlengths_flat * 1000), np.abs(pathlengths_round * 1000), energies * 1000, thetas), axis=1)
     return muons
 
-gen_muons(100000, False)
+#print(gen_muons(100000))
