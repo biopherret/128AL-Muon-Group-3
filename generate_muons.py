@@ -93,8 +93,8 @@ def gen_muons(n_muons: int):
     ----------
     muons: np.array(n_muons, 4)
         Array of muons in the form
-            [[muon_1_pathlength_flat (M), muon_1_pathlength_round (M), muon_1_energy (MeV/c), muon_1_angle (rad)],
-             [muon_2_pathlength_flat (M), muon_2_pathlength_round (M), muon_2_energy (MeV/c), muon_2_angle (rad)] 
+            [[muon_1_pathlength_flat (M), muon_1_pathlength_round (M), muon_1_energy (MeV/c), muon_1_angle (deg)],
+             [muon_2_pathlength_flat (M), muon_2_pathlength_round (M), muon_2_energy (MeV/c), muon_2_angle (deg)] 
              ...]
     """
     thetas = np.random.uniform(-90,90, size=n_muons)
