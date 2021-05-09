@@ -19,11 +19,11 @@ def gen_heights(n_muons, mean = 15, stdev = 2):
    
 #Path length for flat Earth. From https://arxiv.org/pdf/1606.06907v3.pdf (5)
 def gen_pathLengthFlat(theta,d):
-    return d/np.cos(theta)
+    return d/np.cos(np.deg2rad(theta))
 
 #Path length for curved Earth. From https://arxiv.org/pdf/1606.06907v3.pdf (7)
 def gen_pathLength(theta, d, R):
-    return d * ((R**2/d**2 * np.cos(theta)**2 + 2 * R / d + 1)**(.5) - R / d * np.cos(theta))
+    return d * ((R**2/d**2 * np.cos(np.deg2rad(theta))**2 + 2 * R / d + 1)**(.5) - R / d * np.cos(np.deg2rad(theta)))
 
 def monte_carlo_sample(f, bounds, n_samples):
     """Generates a sample from a continuous probability distribution."""
@@ -56,7 +56,7 @@ def fit_energylaw(showplots = False):
     #(at 15KM. conversion from depth to altitude using https://www.engineeringtoolbox.com/air-altitude-pressure-d_462.html)
     #Units are GeV/c vs (cm^2 s sr Gev / c) ^ -1
     data = np.array([[.4, .025], [.5, .017], [.7, .01], [1, .008], [1.25, .004], [1.8, .003], [2.5, .0015], [5,.00035], [18, .00001]])
-    xbounds = [.4, 100]
+    xbounds = [.1, 100]
     #Fit data to ax^b
     data_log = np.log(data)
     fits = np.polyfit(data_log[:,0], data_log[:,1], 1)
@@ -109,4 +109,23 @@ def gen_muons(n_muons: int):
     muons = np.concatenate((np.abs(pathlengths_flat * 1000), np.abs(pathlengths_round * 1000), energies * 1000, thetas), axis=1)
     return muons
 
-#print(gen_muons(100000))
+"""
+muons = gen_muons(1000)
+print(muons)
+x0_flat_initial = muons[:,0] 
+x0_round_initial = muons[:,1] 
+
+E_initial = muons[:,2] 
+zenithAngle_final = muons[:,3]
+
+plt.figure(3)
+plt.scatter(zenithAngle_final, x0_flat_initial)
+#plt.figure(4)
+plt.scatter(zenithAngle_final, x0_round_initial)
+
+plt.figure(5)
+x = np.linspace(-89,89,10000)
+plt.plot(x, gen_pathLength(x, 15, R_earth_SB))
+plt.plot(x, gen_pathLengthFlat(x, 15))
+plt.show()
+"""
