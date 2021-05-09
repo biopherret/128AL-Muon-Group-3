@@ -6,7 +6,7 @@ def find_decay_probability(t_prime):
     """Given the the time it takes for the muon to reach the detector in its own reference frame, returns the probability that it decays. """
     tau = 2.2*10**-6 #seconds
     lam = 1 / tau
-    decay_prob = lam * np.exp(-1 * lam * t_prime) 
+    decay_prob = np.exp(-1 * lam * t_prime) 
     
     return decay_prob
 
@@ -39,10 +39,6 @@ def is_detected(energy, t_prime):
         return False
 
 #dummy lists for now for testing purposes
-E_flat_final = 100*[160]
-E_round_final = 100*[160]
-t_prime_flat_final = 100*[3.2e-5]
-t_prime_round_final = 100*[3.2e-5]
 zenith_angles = np.linspace(0,90,100)
 
 detected_angles_flat = []
