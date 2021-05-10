@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+import generate_muons
+import vectorized_group_one_electron_density
+import copy
 
 #Constants: Not subject to change
 c=3e8 #Speed of light, m/s
@@ -25,13 +28,14 @@ z=1*e #charge of muon relative to electron charge
 def get_C0(gamma,Beta):
     """Given the current gamma and beta, returns the updated C0 value
     C0 is defined as the right side of the Bethe formula divided by rho"""
-    C0=0.00003071*Z*z*z/(A*Beta*Beta)*(np.log(2*m*c**2*10**6*Beta*Beta*gamma*gamma/I)-Beta*Beta)
+    C0 =  100 * 0.00003071*Z*z*z/(A*Beta*Beta)*(np.log(2*m*c**2*10**6*Beta*Beta*gamma*gamma/I)-Beta*Beta)
+    C0[C0 > .2] = 0
     return C0
 
 def get_rho(x):
-    """Given the height from the ground, returns the mass density, rho of the air at that height."""
-    rho=1000*p0*M/(R*T0)*(1-L*x/T0)**(g*M/(R*L)-1)
-    return rho
+    """Given the height from the ground, returns the mass density, rho of the air at that height IN Kg/m^3."""
+    #rho=1000*p0*M/(R*T0)*(1-L*x/T0)**(g*M/(R*L)-1)
+    return vectorized_group_one_electron_density.density_of_atmosphere(x)
 
 def get_dt_prime(C0,rho,gamma1,gamma2):
 	dg = gamma1-gamma2
@@ -41,15 +45,37 @@ def get_dt_prime(C0,rho,gamma1,gamma2):
 
 def findDecayProbability(t_prime):
     """Given the the time it takes for the muon to reach the detector in its own reference frame, returns the probability that it decays. """
-    tau = 2.2*10**-6 #seconds
+    tau = 2.2*10**-6. #seconds
     return np.exp(-1*t_prime/tau)
     
+"""
+E = np.linspace(1e-2, 3000, 2000)
+gamma = E/(m) + 1
+print(gamma)
+beta = np.sqrt(1 - 1/(gamma*gamma))
+print(beta)
+c0 = get_C0(gamma, beta)
+dEdx = c0 * 1
+plt.figure(7)
+plt.loglog(E, dEdx)
+plt.show()
+"""
 
 #Initial Conditions, will be provided from the previous groups as a list for each condition of all the muons
+muons = generate_muons.gen_muons(10000)
+#print(muons)
+x0_flat_initial = muons[:,0] 
+x0_round_initial = muons[:,1] 
 
-E_initial = np.array([6000,7000], dtype = 'f') #units of MeV 
-x0_flat_initial = np.array([12000,10000], dtype = 'f') #height of troposphere
-x0_round_initial = np.array([15000,13000], dtype = 'f')
+E_initial = muons[:,2] 
+zenithAngle_final = muons[:,3]
+
+"""
+E_initial = np.array([1000, 2000, 3000], dtype = 'f') #units of MeV 
+x0_flat_initial = np.array([15000, 15000, 15000], dtype = 'f') #height of troposphere in m
+x0_round_initial = np.array([15000, 15000, 15000], dtype = 'f')
+zenithAngle_final = np.array([0, 0, 0])
+"""
 
 gamma_initial = E_initial/(m)
 Beta_initial = np.sqrt(1-1/(gamma_initial**2))
@@ -63,7 +89,7 @@ E_round_final = np.zeros(len(x0_flat_initial))
 t_prime_flat_final = np.zeros(len(x0_round_initial))
 t_prime_round_final = np.zeros(len(x0_round_initial))
 
-number_of_steps = 5000. #dummy amount, will change
+number_of_steps = 500. #dummy amount, will change
 dx_flat = x0_flat_initial/number_of_steps
 dx_round = x0_round_initial/number_of_steps
 
@@ -71,54 +97,66 @@ dx_round = x0_round_initial/number_of_steps
 Beta = Beta_initial
 x = x0_flat_initial
 gamma = gamma_initial
-E = E_initial
+E_flat = copy.deepcopy(E_initial)
 
 for i in range(int(number_of_steps)):
     C0=get_C0(gamma,Beta)
     rho=get_rho(x)
     dE=C0*rho*dx_flat
-    E1 = E
-    E2 = E1 - dE #feel like this should be adding dE but that results in increasing energy
+    E_flat -= dE
+    #print(E_flat)
+    #E2 = E1 - dE #feel like this should be adding dE but that results in increasing energy
     gamma1 = gamma
-    gamma2 = E2/m
+    gamma2 = E_flat/m + 1
     Beta1=Beta
     Beta2=np.sqrt(1-1/(gamma2*gamma2))
-    t_prime_flat += get_dt_prime(C0,rho,gamma1,gamma2)
+    t_prime_flat -= get_dt_prime(C0,rho,gamma1,gamma2)
 
     gamma = gamma2
     Beta = Beta2
-    E = E2
     x -= dx_flat
-E_flat_final = E
+
+E_flat_final = E_flat
 t_prime_flat_final = t_prime_flat
 
+print("ROUND: ")
 
 #Find the final energies and t_prime for round earth
 Beta = Beta_initial
 x = x0_round_initial
 gamma = gamma_initial
-E = E_initial
+E_round = copy.deepcopy(E_initial)
 
 for i in range(int(number_of_steps)):
     C0=get_C0(gamma,Beta)
     rho=get_rho(x)
     dE=C0*rho*dx_round
-    E1 = E
-    E2 = E1 - dE #feel like this should be adding dE but that results in increasing energy
+    #E1 = E + 0
+    #E2 = E1 - dE #feel like this should be adding dE but that results in increasing energy
+    E_round -= dE
+    #print(E_round)
     gamma1 = gamma
-    gamma2 = E2/m
+    gamma2 = E_round/m + 1
     Beta1=Beta
     Beta2=np.sqrt(1-1/(gamma2*gamma2))
-    t_prime_round += get_dt_prime(C0,rho,gamma1,gamma2)
+    t_prime_round -= get_dt_prime(C0,rho,gamma1,gamma2)
 
     gamma = gamma2
     Beta = Beta2
-    E = E2
     x -= dx_round
 
-E_round_final = E
+E_round_final = E_round
 t_prime_round_final = t_prime_round
- 
+
+"""
+plt.figure(10)
+plt.scatter(zenithAngle_final, E_flat_final - E_round_final)
+print("EDIFF")
+ediff = E_flat_final - E_round_final
+print(E_round_final)
+print(E_flat_final)
+"""
+
 #Simulating how many muons hit the detector:
     #Checks for muons in the proper energy range
     #Makes a probablistic decision whether a paticular muon has decayed
@@ -126,7 +164,7 @@ t_prime_round_final = t_prime_round
         
 energyDetected = 160 #Mev
 
-energyAllowance = 20 #Mev
+energyAllowance = 40 #Mev
 
  
 anglesOfDetectedMuons_flatEarth = []
@@ -145,16 +183,42 @@ for muon in range(len(x0_flat_initial)):
         if (random.random() < findDecayProbability(t_prime_round_final[muon])):
             anglesOfDetectedMuons_roundEarth.append(zenithAngle_final[muon])
         
-bin_number = 20       
+bin_number = 10    
 
-plt.hist(anglesOfDetectedMuons_flatEarth, bins = bin_number)
-plt.title('Flat Earth Distribution of Detected Muons as a Function of Zenith Angle')
+#print(anglesOfDetectedMuons_flatEarth)
+
+plt.figure(1)
+plt.hist(anglesOfDetectedMuons_flatEarth, bins = bin_number, label="flat", alpha=.5, color="blue")
+plt.title('Distribution of Detected Muons as a Function of Zenith Angle')
 plt.xlabel('Zenith Angle (Radians)')
 plt.ylabel('Number of Detected Muons')
-plt.show()
+plt.hist(anglesOfDetectedMuons_roundEarth, bins = bin_number, label="round", alpha=.5, color="green")
+plt.legend()
 
-plt.hist(anglesOfDetectedMuons_roundEarth, bins = bin_number)
-plt.title('Round Earth Distribution of Detected Muons as a Function of Zenith Angle')
-plt.xlabel('Zenith Angle (Radians)')
+"""
+plt.figure(5)
+plt.scatter(zenithAngle_final, t_prime_round_final)
+
+plt.figure(2)
+t_prime_round_final = np.array(t_prime_round_final)
+t_prime_round_final = t_prime_round_final[t_prime_round_final < 1]
+t_prime_round_final = t_prime_round_final[t_prime_round_final > 0]
+t_prime_flat_final = np.array(t_prime_flat_final)
+t_prime_flat_final = t_prime_flat_final[t_prime_flat_final < 1]
+t_prime_flat_final = t_prime_flat_final[t_prime_flat_final > 0]
+plt.hist(t_prime_round_final, bins = bin_number, label="flat", alpha=.5, color="blue")
+plt.title('Distribution of Muons as a Function of muon-frame lifetime')
+plt.xlabel('Lifetime (s)')
 plt.ylabel('Number of Detected Muons')
+plt.hist(t_prime_flat_final, bins = bin_number, label="round", alpha=.5, color="green")
+plt.legend()
+"""
+#plt.figure(3)
+#plt.hist(E_initial, bins = 50)
+
+
+print("Detected flat muons: ")
+print(len(anglesOfDetectedMuons_flatEarth))
+print("Detected round muons: ")
+print(len(anglesOfDetectedMuons_roundEarth))
 plt.show()

@@ -43,6 +43,7 @@ def gen_energies(n_muons):
     samples = monte_carlo_sample(pdist, bounds, n_muons)
     return samples
 
+
 def fit_energylaw(showplots = False):
     """ Fits some data to a power law energy vs intensity distribution.
     Returns
@@ -56,7 +57,7 @@ def fit_energylaw(showplots = False):
     #(at 15KM. conversion from depth to altitude using https://www.engineeringtoolbox.com/air-altitude-pressure-d_462.html)
     #Units are GeV/c vs (cm^2 s sr Gev / c) ^ -1
     data = np.array([[.4, .025], [.5, .017], [.7, .01], [1, .008], [1.25, .004], [1.8, .003], [2.5, .0015], [5,.00035], [18, .00001]])
-    xbounds = [.1, 100]
+    xbounds = [1, 100]
     #Fit data to ax^b
     data_log = np.log(data)
     fits = np.polyfit(data_log[:,0], data_log[:,1], 1)
@@ -97,7 +98,7 @@ def gen_muons(n_muons: int):
              [muon_2_pathlength_flat (M), muon_2_pathlength_round (M), muon_2_energy (MeV/c), muon_2_angle (deg)] 
              ...]
     """
-    thetas = np.random.uniform(-90,90, size=n_muons)
+    thetas = np.random.uniform(0,90, size=n_muons)
     heights = gen_heights(n_muons)
     pathlengths_flat = gen_pathLengthFlat(thetas, heights).reshape(n_muons,1)
     pathlengths_round = gen_pathLength(thetas, heights, R_earth_SB).reshape(n_muons,1)
@@ -124,7 +125,7 @@ plt.scatter(zenithAngle_final, x0_flat_initial)
 plt.scatter(zenithAngle_final, x0_round_initial)
 
 plt.figure(5)
-x = np.linspace(-89,89,10000)
+x = np.linspace(-89.9,89.9,100000)
 plt.plot(x, gen_pathLength(x, 15, R_earth_SB))
 plt.plot(x, gen_pathLengthFlat(x, 15))
 plt.show()
